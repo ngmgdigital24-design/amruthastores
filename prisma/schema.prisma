@@ -1,0 +1,152 @@
+generator client {
+	provider = "prisma-client-js"
+}
+
+datasource db {
+	provider = "postgresql"
+	url      = env("DATABASE_URL")
+}
+
+model User {
+	id            String   @id @default(cuid())
+	email         String   @unique
+	name          String?
+	passwordHash  String?
+	role          String   @default("CUSTOMER") // CUSTOMER | ADMIN
+	createdAt     DateTime @default(now())
+	updatedAt     DateTime @updatedAt
+	orders        Order[]
+	addresses     Address[]
+	notifSubs     NotificationSubscription[]
+	carts         Cart[]
+}
+
+model Product {
+	id           String    @id @default(cuid())
+	title        String
+	slug         String    @unique
+	description  String
+	priceCents   Int
+	currency     String    @default("INR")
+	active       Boolean   @default(true)
+	createdAt    DateTime  @default(now())
+	updatedAt    DateTime  @updatedAt
+	categories   ProductCategory[]
+	inventory    Inventory?
+	orderItems   OrderItem[]
+	cartItems    CartItem[]
+	images       ProductImage[]
+}
+
+model ProductImage {
+	id        String   @id @default(cuid())
+	product   Product  @relation(fields: [productId], references: [id])
+	productId String
+	url       String
+	sortOrder Int      @default(0)
+	createdAt DateTime @default(now())
+}
+
+model Category {
+	id      String   @id @default(cuid())
+	name    String
+	slug    String   @unique
+	products ProductCategory[]
+}
+
+model ProductCategory {
+	product   Product  @relation(fields: [productId], references: [id])
+	productId String
+	category  Category @relation(fields: [categoryId], references: [id])
+	categoryId String
+
+	@@id([productId, categoryId])
+}
+
+model Inventory {
+	product    Product @relation(fields: [productId], references: [id])
+	productId  String  @id
+	quantity   Int     @default(0)
+	lowStockThreshold Int @default(2)
+}
+
+model Cart {
+	id        String   @id @default(cuid())
+	user      User?    @relation(fields: [userId], references: [id])
+	userId    String?
+	guestId   String?
+	items     CartItem[]
+	createdAt DateTime @default(now())
+	updatedAt DateTime @updatedAt
+}
+
+model CartItem {
+	id         String  @id @default(cuid())
+	cart       Cart    @relation(fields: [cartId], references: [id])
+	cartId     String
+	product    Product @relation(fields: [productId], references: [id])
+	productId  String
+	quantity   Int     @default(1)
+	priceCentsSnapshot Int
+}
+
+model Order {
+	id           String   @id @default(cuid())
+	user         User?    @relation(fields: [userId], references: [id])
+	userId       String?
+	status       String   @default("PENDING") // PENDING | PAID | PROCESSING | SHIPPED | DELIVERED | CANCELLED | REFUNDED
+	totalCents   Int
+	currency     String   @default("INR")
+	paymentProvider String?
+	paymentIntentId String?
+	createdAt    DateTime @default(now())
+	updatedAt    DateTime @updatedAt
+	items        OrderItem[]
+	addresses    Address[]
+}
+
+model OrderItem {
+	id         String  @id @default(cuid())
+	order      Order   @relation(fields: [orderId], references: [id])
+	orderId    String
+	product    Product @relation(fields: [productId], references: [id])
+	productId  String
+	titleSnapshot  String
+	priceCentsSnapshot Int
+	quantity    Int
+}
+
+model Address {
+	id         String   @id @default(cuid())
+	user       User?    @relation(fields: [userId], references: [id])
+	userId     String?
+	order      Order?   @relation(fields: [orderId], references: [id])
+	orderId    String?
+	type       String   // SHIPPING | BILLING
+	line1      String
+	line2      String?
+	city       String
+	state      String
+	postalCode String
+	country    String
+	phone      String?
+}
+
+model NotificationSubscription {
+	id        String   @id @default(cuid())
+	user      User?    @relation(fields: [userId], references: [id])
+	userId    String?
+	endpoint  String   @unique
+	p256dh    String
+	auth      String
+	createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
