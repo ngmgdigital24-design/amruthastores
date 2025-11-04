@@ -1,33 +1,51 @@
 import { prisma } from '@/lib/prisma'
 import AddToCartButton from './components/AddToCartButton'
+import { Prisma } from '@prisma/client'
 
 type SearchParams = { [key: string]: string | undefined }
 
-async function getProducts(queryString: string) {
-	try {
-		const base = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-		const response = await fetch(`${base}/api/products${queryString}`, {
-			cache: 'no-store'
-		});
-		if (!response.ok) throw new Error('Failed to fetch products');
-		return await response.json();
-	} catch (error) {
-		console.error('Error fetching products:', error);
-		return { items: [] };
-	}
-}
+export const dynamic = 'force-dynamic'
 
 export default async function Page({ searchParams }: { searchParams: Promise<SearchParams> }) {
     const sp = await searchParams
-    const params = new URLSearchParams()
-    if (sp.q) params.set('q', sp.q)
-    if (sp.category) params.set('category', sp.category)
-    if (sp.inStock) params.set('inStock', sp.inStock)
-    if (sp.sort) params.set('sort', sp.sort)
-	const queryString = params.toString() ? `?${params.toString()}` : ''
+    const q = sp.q?.trim() || ''
+    const category = sp.category || undefined
+    const inStockParam = sp.inStock
+    const inStock = inStockParam === 'true' ? true : inStockParam === 'false' ? false : undefined
+    const sort = (sp.sort || 'newest') as 'newest' | 'price_asc' | 'price_desc'
 
-	const [{ items: products }, categories] = await Promise.all([
-		getProducts(queryString),
+    const where: any = { active: true }
+    if (q) {
+        where.OR = [
+            { title: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+        ]
+    }
+    if (category) {
+        where.categories = { some: { category: { slug: category } } }
+    }
+    if (typeof inStock === 'boolean') {
+        where.inventory = inStock
+            ? { quantity: { gt: 0 } }
+            : { OR: [{ quantity: 0 }, { productId: { equals: '' } }] }
+    }
+
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+        sort === 'price_asc' ? { priceCents: Prisma.SortOrder.asc } :
+        sort === 'price_desc' ? { priceCents: Prisma.SortOrder.desc } : 
+        { createdAt: Prisma.SortOrder.desc }
+
+	const [products, categories] = await Promise.all([
+		prisma.product.findMany({
+            where,
+            orderBy,
+            take: 100,
+            include: {
+                inventory: true,
+                categories: { include: { category: true } },
+                images: true,
+            },
+        }),
 		prisma.category.findMany({ orderBy: { name: 'asc' } }),
 	])
 
