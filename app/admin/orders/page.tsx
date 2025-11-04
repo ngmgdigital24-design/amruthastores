@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export default async function AdminOrdersPage() {
   const orders = await prisma.order.findMany({
