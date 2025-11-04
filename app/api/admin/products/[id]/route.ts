@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id
+    const { id } = await params
     const body = await request.json()
     const quantity = typeof body.quantity === 'number' ? body.quantity : undefined
     const active = typeof body.active === 'boolean' ? body.active : undefined

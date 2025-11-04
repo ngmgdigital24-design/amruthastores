@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import EditInventoryForm from './EditInventoryForm'
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
-  const product = await prisma.product.findUnique({ where: { id: params.id }, include: { inventory: true } })
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const product = await prisma.product.findUnique({ where: { id }, include: { inventory: true } })
   if (!product) {
     return (
       <main className="container mx-auto py-10 px-4">

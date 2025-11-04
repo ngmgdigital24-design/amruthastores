@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma'
 
-export default async function AdminOrderDetail({ params }: { params: { id: string } }) {
+export default async function AdminOrderDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { items: { include: { product: true } }, addresses: true },
   })
   if (!order) {

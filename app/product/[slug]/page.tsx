@@ -1,11 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import AddToCartButton from '../../components/AddToCartButton'
 
-type PageProps = { params: { slug: string } }
-
-export default async function ProductPage({ params }: PageProps) {
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params
     const product = await prisma.product.findUnique({
-        where: { slug: params.slug },
+        where: { slug },
         include: {
             images: true,
             inventory: true,
