@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     // Save in DB
-    const saved = await prisma.contactMessage.create({
+    const saved = await (prisma as any).contactMessage.create({
       data: { name, email, message },
     })
 
@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
     const id = String(data.id || '')
     const handled = Boolean(data.handled)
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-    const updated = await prisma.contactMessage.update({ where: { id }, data: { handled } })
+    const updated = await (prisma as any).contactMessage.update({ where: { id }, data: { handled } })
     return NextResponse.json({ ok: true, handled: updated.handled })
   } catch (error: any) {
     return NextResponse.json({ error: 'Unable to update', details: error?.message }, { status: 500 })

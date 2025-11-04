@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 function parseIntSafe(value: string | null, defaultValue: number) {
 	const n = value ? parseInt(value, 10) : NaN
@@ -36,9 +37,9 @@ export async function GET(request: Request) {
 				: { OR: [{ quantity: 0 }, { productId: { equals: '' } }] } // placeholder to allow zero match; SQLite needs explicit check
 		}
 
-		const orderBy =
-			sort === 'price_asc' ? { priceCents: 'asc' } :
-			sort === 'price_desc' ? { priceCents: 'desc' } : { createdAt: 'desc' }
+		const orderBy: Prisma.ProductOrderByWithRelationInput =
+			sort === 'price_asc' ? { priceCents: Prisma.SortOrder.asc } :
+			sort === 'price_desc' ? { priceCents: Prisma.SortOrder.desc } : { createdAt: Prisma.SortOrder.desc }
 
         const [items, total] = await Promise.all([
             prisma.product.findMany({
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ page, pageSize, total, items })
 	} catch (error) {
         console.error('[products] error', error);
-		return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 });
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+		return NextResponse.json({ error: 'Internal server error', details: errorMessage }, { status: 500 });
 	}
 }

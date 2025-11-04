@@ -2,10 +2,11 @@ import { prisma } from '@/lib/prisma'
 import ToggleHandled from './ToggleHandled'
 
 // Server component with simple filter params
-export default async function AdminContactsPage({ searchParams }: { searchParams?: { q?: string; from?: string; to?: string } }) {
-    const q = (searchParams?.q || '').trim()
-    const from = searchParams?.from ? new Date(searchParams.from) : null
-    const to = searchParams?.to ? new Date(searchParams.to) : null
+export default async function AdminContactsPage({ searchParams }: { searchParams?: Promise<{ q?: string; from?: string; to?: string }> }) {
+    const sp = await searchParams
+    const q = (sp?.q || '').trim()
+    const from = sp?.from ? new Date(sp.from) : null
+    const to = sp?.to ? new Date(sp.to) : null
 
     const where: any = {}
     if (q) {
@@ -21,7 +22,7 @@ export default async function AdminContactsPage({ searchParams }: { searchParams
         if (to) where.createdAt.lte = to
     }
 
-    const messages = await prisma.contactMessage.findMany({
+    const messages = await (prisma as any).contactMessage.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: 500,
@@ -50,8 +51,8 @@ export default async function AdminContactsPage({ searchParams }: { searchParams
 
             <form method="get" className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
                 <input name="q" placeholder="Search name/email/message" defaultValue={q} className="border rounded px-3 py-2" />
-                <input name="from" type="date" className="border rounded px-3 py-2" defaultValue={searchParams?.from || ''} />
-                <input name="to" type="date" className="border rounded px-3 py-2" defaultValue={searchParams?.to || ''} />
+                <input name="from" type="date" className="border rounded px-3 py-2" defaultValue={sp?.from || ''} />
+                <input name="to" type="date" className="border rounded px-3 py-2" defaultValue={sp?.to || ''} />
                 <button className="px-4 py-2 bg-gray-900 text-white rounded">Filter</button>
                 <a
                   href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`}
@@ -75,7 +76,7 @@ export default async function AdminContactsPage({ searchParams }: { searchParams
                             </tr>
                         </thead>
                         <tbody className="text-sm">
-                            {messages.map(m => (
+                            {messages.map((m: { id: string; createdAt: Date; name: string; email: string; message: string; handled: boolean }) => (
                                 <tr key={m.id} className="align-top">
                                     <td className="p-3 border-b whitespace-nowrap">{new Date(m.createdAt).toLocaleString()}</td>
                                     <td className="p-3 border-b">{m.name}</td>
@@ -84,11 +85,6 @@ export default async function AdminContactsPage({ searchParams }: { searchParams
                                         <div className="whitespace-pre-wrap break-words">{m.message}</div>
                                     </td>
                                     <td className="p-3 border-b">
-                                        <form action="/api/contact" method="post" onSubmit={undefined}>
-                                            <input type="hidden" name="id" value={m.id} />
-                                        </form>
-                                        <form className="inline" method="dialog" onSubmit={undefined}></form>
-                                        <form className="inline" onSubmit={undefined}></form>
                                         <ToggleHandled id={m.id} defaultChecked={m.handled} />
                                     </td>
                                 </tr>
